@@ -1,6 +1,6 @@
 DIR = .
 FILE = Dockerfile
-IMAGE = "flaconi/docker-sonar-scanner"
+IMAGE = "flaconi/sonar-scanner"
 TAG = latest
 
 
