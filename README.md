@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.com/Flaconi/docker-sonar-scanner.svg?branch=master)](https://travis-ci.com/Flaconi/docker-sonar-scanner)
 
-[flaconi/sonar-scanner](https://hub.docker.com/r/flaconi/sonar-scanner/tags)
+[![flaconi/sonar-scanner](https://dockeri.co/image/flaconi/sonar-scanner)](https://hub.docker.com/r/flaconi/sonar-scanner/)
 
 This repository provides the SonarQube Scanner binary for testing against SonarQube or SonarCloud.
 
