@@ -1,0 +1,49 @@
+---
+
+###
+### Travis settings
+###
+sudo: required
+services:
+  - docker
+
+
+###
+### Install requirements
+###
+install:
+  # Get newer docker version
+  - max=100; i=0; while [ $i -lt $max ]; do if sudo apt-get update; then break; else i=$((i+1)); fi done
+  - max=100; i=0; while [ $i -lt $max ]; do if sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-ce; then break; else i=$((i+1)); fi done
+  - docker version
+
+
+###
+### Build and test Docker images
+###
+before_script:
+  - make build
+  - make test
+
+
+###
+### Push Docker images
+###
+script:
+  # Push to docker hub on success
+  - if [ "${TRAVIS_PULL_REQUEST}" == "false" ]; then
+      make login DOCKER_USER="${DOCKER_USER}" DOCKER_PASS="${DOCKER_PASS}";
+      if [ -n "${TRAVIS_TAG}" ]; then
+        make push TAG="${TRAVIS_TAG}";
+      elif [ "${TRAVIS_BRANCH}" == "master" ]; then
+        make push;
+      elif [[ ${TRAVIS_BRANCH} =~ ^(release-[.0-9]+)$ ]]; then
+        make push TAG="${TRAVIS_BRANCH}";
+      elif [[ ${TRAVIS_BRANCH} =~ ^(OPS-.*)$ ]]; then
+        make push TAG="${TRAVIS_BRANCH}";
+      else
+        echo "Skipping branch ${TRAVIS_BRANCH}";
+      fi
+    else
+      echo "Skipping push on PR";
+    fi
