@@ -8,7 +8,8 @@ ENV BUILD_DEPS \
 	xz-utils
 
 ENV RUN_DEPS \
-	ca-certificates
+	ca-certificates \
+	jq
 
 
 ###
@@ -59,6 +60,12 @@ RUN set -ex \
 	&& rm sonar-scanner-cli.zip \
 	&& mv /tmp/sonar-scanner-* /usr/local/sonar-scanner \
 	&& ln -s /usr/local/sonar-scanner/bin/sonar-scanner /usr/local/bin/sonar-scanner
+
+
+###
+### SonarCube Result fetcher
+###
+COPY data/sonar-result /usr/local/bin/sonar-result
 
 
 ###

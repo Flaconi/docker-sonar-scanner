@@ -1,0 +1,175 @@
+#!/usr/bin/env bash
+
+set -e
+set -u
+set -o pipefail
+
+# --------------------------------------------------------------------------------------------------
+# GLOBALS
+# --------------------------------------------------------------------------------------------------
+CLR_TEST="\033[0;33m"  # Yellow
+CLR_FAIL="\033[0;31m"  # Red
+CLR_OK="\033[0;32m"    # Green
+CLR_RST="\033[m"       # Reset to normal
+
+
+# --------------------------------------------------------------------------------------------------
+# HELPER FUNCTIONS
+# --------------------------------------------------------------------------------------------------
+
+function print_version() {
+	echo "sonarcloud-fetch v0.1"
+}
+
+
+function print_usage() {
+	cat <<'EOF'
+USAGE: sonarcloud-result [-t <token>] [<path>]
+	   sonarcloud-result --help
+	   sonarcloud-result --version
+
+Options
+   -t <token>   (Optional) The SonarCloud Token for authorization
+
+Arguments
+	<path>	  (Optional) The path to the project. Uses current directory if not specified
+EOF
+}
+
+
+# --------------------------------------------------------------------------------------------------
+# SANITY CHECK
+# --------------------------------------------------------------------------------------------------
+if ! command -v jq >/dev/null 2>&1; then
+	>&2 echo "Error, 'jq' binary required but not found"
+	exit 1
+fi
+
+
+# --------------------------------------------------------------------------------------------------
+# ARGUMENTS
+# --------------------------------------------------------------------------------------------------
+SONARCLOUD_TOKEN=
+
+###
+### Get SonarCloud Token
+###
+while [ ${#} -gt 0 ]; do
+	case "${1}" in
+		# ---- Help / version
+		--version)
+			print_version
+			exit
+			;;
+		--help)
+			print_usage
+			exit
+			;;
+		# ---- Options
+		-t)
+			shift
+			SONARCLOUD_TOKEN="${1}"
+			shift
+			;;
+		# ---- Stop here
+		--) # End of all options
+			shift
+			break
+			;;
+		-*) # Unknown option
+			>&2 echo "Error: Unknown option: ${1}"
+			exit 1
+			;;
+		*)  # No more options
+			break
+			;;
+	esac
+done
+
+
+###
+### Get Path
+###
+
+if [ "${#}" -eq "1" ]; then
+	WORKDIR="${1}"
+elif [ "${#}" -eq "0" ]; then
+	WORKDIR="$( pwd )"
+else
+	>&2 "Error: Too many arguments."
+	exit 1
+fi
+
+
+# --------------------------------------------------------------------------------------------------
+# ENTRYPOINT: Sanity check
+# --------------------------------------------------------------------------------------------------
+
+if [ ! -d "${WORKDIR}" ]; then
+	>&2 "Error, invalid directory"
+	exit 1
+fi
+
+if [ ! -f "${WORKDIR}/.scannerwork/report-task.txt" ]; then
+	>&2 "Error, report-task.txt not found in: ${WORKDIR}/.scannerwork/report-task.txt"
+	exit 1
+fi
+
+
+# --------------------------------------------------------------------------------------------------
+# ENTRYPOINT: Main
+# --------------------------------------------------------------------------------------------------
+
+printf "${CLR_TEST}[TEST]${CLR_RST} Waiting for SonarQube task status "
+
+###
+### Make variables available to this script
+###
+source .scannerwork/report-task.txt
+
+
+###
+### Check remote result in a loop
+###
+max=120; i=0; while [ "${i}" -lt "${max}" ]; do
+	# shellcheck disable=SC2154
+	TASK_RESULT="$( curl -sSu "${SONARCLOUD_TOKEN}:" "${ceTaskUrl}" )"
+	TASK_STATUS="$(echo "${TASK_RESULT}" | jq '.task.status' | sed 's/"//g' )"
+	printf "."
+
+	if [ "${TASK_STATUS}" != "PENDING" ] && [ "${TASK_STATUS}" != "IN_PROGRESS" ]; then
+		break
+	else
+		i=$((i+1))
+	fi
+
+	sleep 1;
+done
+printf "\r${CLR_OK}[OK]${CLR_RST}   Waiting for SonarQube task status\n"
+
+
+###
+### Evaluate Task status
+###
+if [ "${TASK_STATUS}" = "SUCCESS" ]; then
+	printf "${CLR_OK}[OK]${CLR_RST}   SonarQube task status: ${TASK_STATUS}\n"
+else
+	printf "${CLR_FAIL}[FAIL]${CLR_RST} SonarQube task status: ${TASK_STATUS}\n"
+	exit 1
+fi
+
+
+###
+### Evaluate Quality Gate
+###
+QG_RESULT_ID="$( echo "${TASK_RESULT}" | jq '.task.analysisId' | sed 's/"//g' )"
+# shellcheck disable=SC2154
+QG_RESULT="$( curl -sSu "${SONARCLOUD_TOKEN}:" "${serverUrl}/api/qualitygates/project_status?analysisId=${QG_RESULT_ID}" )"
+QG_STATUS="$( echo "${QG_RESULT}" | jq '.projectStatus.status' | sed 's/"//g' )"
+
+if [ "${QG_STATUS}" != "ERROR" ]; then
+	printf "${CLR_OK}[OK]${CLR_RST}   SonarQube Quality Gate: ${QG_STATUS}\n"
+else
+	printf "${CLR_OK}[FAIL]${CLR_RST} SonarQube Quality Gate: ${QG_STATUS}\n"
+	exit 1
+fi
