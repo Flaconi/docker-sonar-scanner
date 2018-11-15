@@ -25,14 +25,14 @@ function print_version() {
 function print_usage() {
 	cat <<'EOF'
 USAGE: sonarcloud-result [-t <token>] [<path>]
-	   sonarcloud-result --help
-	   sonarcloud-result --version
+       sonarcloud-result --help
+       sonarcloud-result --version
 
 Options
-   -t <token>   (Optional) The SonarCloud Token for authorization
+   -t <token>  (Optional) The SonarCloud Token for authorization
 
 Arguments
-	<path>	  (Optional) The path to the project. Uses current directory if not specified
+   <path>      (Optional) The path to the project. Uses current directory if not specified
 EOF
 }
 
@@ -80,7 +80,7 @@ while [ ${#} -gt 0 ]; do
 			>&2 echo "Error: Unknown option: ${1}"
 			exit 1
 			;;
-		*)  # No more options
+		*) # No more options
 			break
 			;;
 	esac
