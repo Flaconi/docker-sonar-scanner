@@ -41,8 +41,8 @@ RUN set -ex \
 	&& mv node* /usr/local/node \
 	&& ln -s /usr/local/node/bin/node /usr/local/bin/node \
 	&& ln -s /usr/local/node/bin/npm /usr/local/bin/npm \
-	&& ln -s /usr/local/node/bin/npx /usr/local/bin/npx
-
+	&& ln -s /usr/local/node/bin/npx /usr/local/bin/npx \
+	&& npm install -g typescript
 
 
 ###
