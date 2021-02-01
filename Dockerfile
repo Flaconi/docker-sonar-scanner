@@ -48,13 +48,14 @@ RUN set -ex \
 ###
 ### Sonar Scanner
 ###
-ENV SONAR_DOWNLOAD_URL="https://docs.sonarqube.org/display/SCAN/Analyzing+with+SonarQube+Scanner"
+ENV SONAR_DOWNLOAD_URL="https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/"
 RUN set -ex \
 	&& SONAR_DOWNLOAD_ZIP="$( \
-		curl -sSL  https://docs.sonarqube.org/display/SCAN/Analyzing+with+SonarQube+Scanner \
-		| grep -Eo 'https://.*?sonar-scanner-cli-[.0-9]+-linux\.zip' \
+		curl -sSL  https://binaries.sonarsource.com/Distribution/sonar-scanner-cli \
+		| grep -Eo '.*?sonar-scanner-cli-[.0-9]+-linux\.zip' | sort -n \
+		| tail -n 1 | awk '{ print $3 }' \
 	)" \
-	&& curl -sSL "${SONAR_DOWNLOAD_ZIP}" > /tmp/sonar-scanner-cli.zip \
+	&& curl -sSL "${SONAR_DOWNLOAD_URL}${SONAR_DOWNLOAD_ZIP}" > /tmp/sonar-scanner-cli.zip \
 	&& cd /tmp \
 	&& unzip sonar-scanner-cli.zip \
 	&& rm sonar-scanner-cli.zip \
